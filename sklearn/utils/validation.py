@@ -94,8 +94,10 @@ def as_float_array(X, copy=True, force_all_finite=True):
     XT : {array, sparse matrix}
         An array of type np.float
     """
-    if isinstance(X, np.matrix) or (not isinstance(X, np.ndarray)
-                                    and not sp.issparse(X)):
+    if isinstance(X, np.matrix):
+        X = np.array(X)
+
+    elif not isinstance(X, np.ndarray) and not sp.issparse(X):
         return check_array(X, ['csr', 'csc', 'coo'], dtype=np.float64,
                            copy=copy, force_all_finite=force_all_finite,
                            ensure_2d=False)
