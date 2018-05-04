@@ -20,6 +20,9 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.base import BaseEstimator, ClassifierMixin
 
+# for verbosity tests
+from sklearn.externals.six.moves import cStringIO as StringIO
+import sys
 
 # Load the iris dataset and randomly permute it
 iris = datasets.load_iris()
@@ -80,8 +83,8 @@ def test_majority_label_iris():
     clf2 = RandomForestClassifier(random_state=123)
     clf3 = GaussianNB()
     eclf = VotingClassifier(estimators=[
-                ('lr', clf1), ('rf', clf2), ('gnb', clf3)],
-                voting='hard')
+        ('lr', clf1), ('rf', clf2), ('gnb', clf3)],
+        voting='hard')
     scores = cross_val_score(eclf, X, y, cv=5, scoring='accuracy')
     assert_almost_equal(scores.mean(), 0.95, decimal=2)
 
@@ -215,8 +218,8 @@ def test_gridsearch():
     clf2 = RandomForestClassifier(random_state=1)
     clf3 = GaussianNB()
     eclf = VotingClassifier(estimators=[
-                ('lr', clf1), ('rf', clf2), ('gnb', clf3)],
-                voting='soft')
+        ('lr', clf1), ('rf', clf2), ('gnb', clf3)],
+        voting='soft')
 
     params = {'lr__C': [1.0, 100.0],
               'voting': ['soft', 'hard'],
@@ -280,6 +283,7 @@ def test_sample_weight_kwargs():
     """Check that VotingClassifier passes sample_weight as kwargs"""
     class MockClassifier(BaseEstimator, ClassifierMixin):
         """Mock Classifier to check that sample_weight is received as kwargs"""
+
         def fit(self, X, y, *args, **sample_weight):
             assert_true('sample_weight' in sample_weight)
 
@@ -381,13 +385,13 @@ def test_estimator_weights_format():
     clf1 = LogisticRegression(random_state=123)
     clf2 = RandomForestClassifier(random_state=123)
     eclf1 = VotingClassifier(estimators=[
-                ('lr', clf1), ('rf', clf2)],
-                weights=[1, 2],
-                voting='soft')
+        ('lr', clf1), ('rf', clf2)],
+        weights=[1, 2],
+        voting='soft')
     eclf2 = VotingClassifier(estimators=[
-                ('lr', clf1), ('rf', clf2)],
-                weights=np.array((1, 2)),
-                voting='soft')
+        ('lr', clf1), ('rf', clf2)],
+        weights=np.array((1, 2)),
+        voting='soft')
     eclf1.fit(X, y)
     eclf2.fit(X, y)
     assert_array_almost_equal(eclf1.predict_proba(X), eclf2.predict_proba(X))
@@ -425,6 +429,43 @@ def test_transform():
     assert_array_almost_equal(res.swapaxes(0, 1).reshape((4, 6)),
                               eclf2.transform(X))
     assert_array_almost_equal(
-            eclf3.transform(X).swapaxes(0, 1).reshape((4, 6)),
-            eclf2.transform(X)
+        eclf3.transform(X).swapaxes(0, 1).reshape((4, 6)),
+        eclf2.transform(X)
     )
+
+
+def test_verbose():
+    # Check verbose=1 does not cause error.
+    clf1 = LogisticRegression(random_state=123)
+    clf2 = RandomForestClassifier(random_state=123)
+    clf3 = SVC(gamma='scale', probability=True, random_state=123)
+    eclf = VotingClassifier(estimators=[
+        ('lr', clf1), ('rf', clf2), ('gnb', clf3)],
+        verbose=1)
+
+    old_stderr = sys.stderr
+    err_msg = sys.stderr = StringIO()
+    eclf.fit(X, y)
+    out_msg = err_msg.getvalue()
+    sys.stderr = old_stderr
+    n_estimators = str(len(eclf.estimators))
+    expected_out = '[Parallel(n_jobs=1)]: ' + \
+        '   '.join(['Done', n_estimators +
+                    ' out of',  n_estimators +
+                    ' | elapsed:', ' 0.0s finished\n'])
+    assert_equal(out_msg, expected_out)
+
+
+def test_no_verbose():
+    clf1 = LogisticRegression(random_state=123)
+    clf2 = RandomForestClassifier(random_state=123)
+    clf3 = SVC(gamma='scale', probability=True, random_state=123)
+    eclf = VotingClassifier(
+        estimators=[('lr', clf1), ('rf', clf2), ('gnb', clf3)])
+
+    old_stderr = sys.stderr
+    err_msg = sys.stderr = StringIO()
+    eclf.fit(X, y)
+    out_msg = err_msg.getvalue()
+    sys.stderr = old_stderr
+    assert_equal(out_msg, '')

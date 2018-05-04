@@ -70,6 +70,9 @@ class VotingClassifier(_BaseComposition, ClassifierMixin, TransformerMixin):
         flatten_transform=False, it returns
         (n_classifiers, n_samples, n_classes).
 
+    verbose : int, optional (default=0)
+        Controls the verbosity of the building process.
+
     Attributes
     ----------
     estimators_ : list of classifiers
@@ -122,12 +125,13 @@ class VotingClassifier(_BaseComposition, ClassifierMixin, TransformerMixin):
     """
 
     def __init__(self, estimators, voting='hard', weights=None, n_jobs=1,
-                 flatten_transform=None):
+                 flatten_transform=None, verbose=0):
         self.estimators = estimators
         self.voting = voting
         self.weights = weights
         self.n_jobs = n_jobs
         self.flatten_transform = flatten_transform
+        self.verbose = verbose
 
     @property
     def named_estimators(self):
@@ -192,10 +196,10 @@ class VotingClassifier(_BaseComposition, ClassifierMixin, TransformerMixin):
 
         transformed_y = self.le_.transform(y)
 
-        self.estimators_ = Parallel(n_jobs=self.n_jobs)(
-                delayed(_parallel_fit_estimator)(clone(clf), X, transformed_y,
-                                                 sample_weight=sample_weight)
-                for clf in clfs if clf is not None)
+        self.estimators_ = Parallel(n_jobs=self.n_jobs, verbose=self.verbose)(
+            delayed(_parallel_fit_estimator)(clone(clf), X, transformed_y,
+                                             sample_weight=sample_weight)
+            for clf in clfs if clf is not None)
 
         self.named_estimators_ = Bunch(**dict())
         for k, e in zip(self.estimators, self.estimators_):
