@@ -222,3 +222,15 @@ def test_n_components():
     labels_diff_ncomp = SpectralClustering(n_components=2,
                                            random_state=0).fit(X).labels_
     assert not np.array_equal(labels, labels_diff_ncomp)
+
+
+def test_np_matrix_input():
+    # Test whether np.matrix input works correctly when given as input
+    X = np.random.rand(10, 10)
+    sim = np.tril(X) + np.tril(X, -1).T
+    sim_matrix = np.matrix(sim)
+
+    labels_array = spectral_clustering(sim, random_state=42)
+    labels_matrix = spectral_clustering(sim_matrix, random_state=42)
+
+    assert labels_array.all() == labels_matrix.all()
