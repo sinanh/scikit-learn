@@ -145,10 +145,7 @@ def test_affinities():
 
                       centers = [[1, 1], [-1, -1]], cluster_std = 0.01
                       )
-<< << << < HEAD
 
-== == == =
->>>>>> > PEP8 fixes
     # nearest neighbors affinity
     sp=SpectralClustering(n_clusters = 2, affinity = 'nearest_neighbors',
                             random_state = 0)
